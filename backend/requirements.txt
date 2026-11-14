@@ -7,3 +7,5 @@ pymongo
 google-genai
 fpdf2
 requests
+pyjwt
+passlib[bcrypt]
