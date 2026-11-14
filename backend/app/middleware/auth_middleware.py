@@ -9,9 +9,34 @@ SECRET_KEY = os.getenv("JWT_SECRET", "audit_trail_2_super_secret_key")
 ALGORITHM = "HS256"
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
+# Support both canonical Title Case and uppercase codes from frontend
+ROLE_MAP = {
+    "ADMIN": "Admin",
+    "SUPPLIER": "Supplier",
+    "TRANSPORTER": "Transporter",
+    "RECEIVER": "Receiver",
+    "AUDITOR": "Auditor",
+    "LOGISTICS_MANAGER": "Logistics Manager",
+    "LOGISTICS MANAGER": "Logistics Manager",
+    "ADMINISTRATOR": "Admin",
+}
+
 VALID_ROLES = [
     "Admin", "Supplier", "Transporter", "Receiver", "Auditor", "Logistics Manager"
 ]
+
+def normalize_role(role_input: str) -> str:
+    """Normalize any role string (e.g. 'ADMIN', 'LOGISTICS_MANAGER', 'Supplier') to canonical title."""
+    if not role_input:
+        return "Logistics Manager"
+    cleaned = role_input.strip()
+    upper = cleaned.upper().replace("-", "_")
+    if upper in ROLE_MAP:
+        return ROLE_MAP[upper]
+    for valid in VALID_ROLES:
+        if cleaned.lower() == valid.lower():
+            return valid
+    return cleaned
 
 def hash_password(password: str) -> str:
     return pwd_context.hash(password)

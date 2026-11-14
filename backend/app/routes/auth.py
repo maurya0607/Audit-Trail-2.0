@@ -2,14 +2,15 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, HTTPException
 from app.database import db
 from app.schemas.all_schemas import UserRegister, UserLogin
-from app.middleware.auth_middleware import hash_password, verify_password, create_access_token, VALID_ROLES
+from app.middleware.auth_middleware import hash_password, verify_password, create_access_token, normalize_role, VALID_ROLES
 
 router = APIRouter(prefix="/api/auth", tags=["Authentication & RBAC"])
 
 @router.post("/register")
 async def register_user(req: UserRegister):
-    if req.role not in VALID_ROLES:
-        raise HTTPException(status_code=400, detail=f"Invalid role. Must be one of {VALID_ROLES}")
+    canonical_role = normalize_role(req.role)
+    if canonical_role not in VALID_ROLES:
+        raise HTTPException(status_code=400, detail=f"Invalid role '{req.role}'. Must be one of {VALID_ROLES}")
     if await db.users.find_one({"email": req.email}):
         raise HTTPException(status_code=400, detail="Email already registered")
 
@@ -17,12 +18,13 @@ async def register_user(req: UserRegister):
         "name": req.name,
         "email": req.email,
         "password_hash": hash_password(req.password),
-        "role": req.role,
+        "role": canonical_role,
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     await db.users.insert_one(user_doc)
-    token = create_access_token({"email": req.email, "role": req.role, "name": req.name})
-    return {"access_token": token, "user": {"name": req.name, "email": req.email, "role": req.role}}
+    token = create_access_token({"email": req.email, "role": canonical_role, "name": req.name})
+    return {"access_token": token, "user": {"name": req.name, "email": req.email, "role": canonical_role}}
+
 
 @router.post("/login")
 async def login_user(req: UserLogin):

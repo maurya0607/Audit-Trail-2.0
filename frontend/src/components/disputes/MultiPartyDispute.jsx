@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import toast from 'react-hot-toast';
 import { useAuth, ROLES } from '../../context/AuthContext';
 import {
   Scale,
@@ -77,6 +78,15 @@ export default function MultiPartyDispute() {
     setTimeout(() => {
       setManagerVerdict(verdict);
       setIsDeciding(false);
+      toast.success(
+        verdict === 'APPROVE_AI_ADVICE'
+          ? 'Manager Verdict executed: $24.5K liability assigned to Transporter'
+          : `Manager Verdict executed: ${verdict}`,
+        {
+          icon: '⚖️',
+          duration: 5000,
+        }
+      );
     }, 500);
   };
 

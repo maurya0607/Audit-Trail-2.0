@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useShipments } from '../../context/ShipmentContext';
+import { useAuth, ROLES } from '../../context/AuthContext';
 import ShipmentStatusBadge from './ShipmentStatusBadge';
 import {
   Truck,
@@ -12,10 +13,14 @@ import {
   Search,
   PlusCircle,
   Filter,
+  ShieldCheck,
+  Building2,
+  UserCheck,
 } from 'lucide-react';
 
 export default function ShipmentTable() {
   const { shipments, openDetails, setIsCreateOpen } = useShipments();
+  const { user } = useAuth();
   const [filter, setFilter] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -31,10 +36,53 @@ export default function ShipmentTable() {
       const matchCarrier = s.carrier?.toLowerCase().includes(q);
       const matchDest = s.destination?.toLowerCase().includes(q);
       const matchOrigin = s.origin?.toLowerCase().includes(q);
-      return matchId || matchTitle || matchCarrier || matchDest || matchOrigin;
+      const matchSupplier = s.supplier?.toLowerCase().includes(q);
+      const matchReceiver = s.receiver?.toLowerCase().includes(q);
+      return matchId || matchTitle || matchCarrier || matchDest || matchOrigin || matchSupplier || matchReceiver;
     }
     return true;
   });
+
+  // Role custom headline
+  const getRoleHeaderInfo = () => {
+    if (!user) return { title: 'Shipment Verification Directory', sub: 'Global monitored freight units' };
+    switch (user.role) {
+      case ROLES.ADMIN:
+        return {
+          title: 'Master Consignment Ledger (Admin Authority)',
+          sub: `Full unrestricted view across all logistics participants — ${shipments.length} consignments logged`,
+        };
+      case ROLES.LOGISTICS_MANAGER:
+        return {
+          title: 'Fleet Operations & SLA Compliance Directory',
+          sub: `Active operational consignments under dispute arbitration & delivery management`,
+        };
+      case ROLES.SUPPLIER:
+        return {
+          title: 'Outbound Supplier Dispatches (Novartis & FreshMart)',
+          sub: `Showing consignments originated by your supplier entity (${user.organization})`,
+        };
+      case ROLES.TRANSPORTER:
+        return {
+          title: 'Assigned Carrier Manifest (AeroCold & NorthStar)',
+          sub: `Showing shipments currently assigned to your transport fleet (${user.organization})`,
+        };
+      case ROLES.RECEIVER:
+        return {
+          title: 'Inbound Consignee Receiving Vault',
+          sub: `Showing shipments destined for your facility (${user.organization})`,
+        };
+      case ROLES.AUDITOR:
+        return {
+          title: 'Regulatory Audit & Verification Registry',
+          sub: `Cryptographically verified SHA-256 event chains for independent audit`,
+        };
+      default:
+        return { title: 'Shipment Verification Directory', sub: 'Tracked freight assets' };
+    }
+  };
+
+  const headerInfo = getRoleHeaderInfo();
 
   return (
     <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm space-y-5 transition-colors">
@@ -44,11 +92,11 @@ export default function ShipmentTable() {
           <div className="flex items-center gap-2">
             <Truck className="w-5 h-5 text-cyan-600 dark:text-cyan-400" />
             <h2 className="text-base font-bold text-slate-900 dark:text-white">
-              Shipment Verification Directory
+              {headerInfo.title}
             </h2>
           </div>
           <p className="text-xs text-slate-500 dark:text-slate-400">
-            Real-time telemetry and cryptographic status for {shipments.length} tracked assets
+            {headerInfo.sub}
           </p>
         </div>
 
@@ -64,20 +112,22 @@ export default function ShipmentTable() {
             />
           </div>
 
-          <button
-            onClick={() => setIsCreateOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-cyan-600 hover:bg-cyan-500 text-white rounded-xl text-xs font-bold shadow-md shadow-cyan-600/20 transition-all shrink-0"
-          >
-            <PlusCircle className="w-3.5 h-3.5" />
-            <span>New Shipment</span>
-          </button>
+          {(user?.role === ROLES.ADMIN || user?.role === ROLES.SUPPLIER || user?.role === ROLES.LOGISTICS_MANAGER) && (
+            <button
+              onClick={() => setIsCreateOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-cyan-600 hover:bg-cyan-500 text-white rounded-xl text-xs font-bold shadow-md shadow-cyan-600/20 transition-all shrink-0"
+            >
+              <PlusCircle className="w-3.5 h-3.5" />
+              <span>New Shipment</span>
+            </button>
+          )}
         </div>
       </div>
 
       {/* Filter Tabs */}
       <div className="flex items-center gap-2 overflow-x-auto pb-1">
         {[
-          { id: 'ALL', label: 'All Consignments' },
+          { id: 'ALL', label: `All Consignments (${filtered.length})` },
           { id: 'ACTIVE', label: 'Active In-Transit' },
           { id: 'HOLD', label: 'Customs Hold' },
           { id: 'ALERT', label: 'Thermal Excursion Alerts' },
@@ -103,8 +153,9 @@ export default function ShipmentTable() {
             <tr className="border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider">
               <th className="py-3 px-3">Shipment Ref</th>
               <th className="py-3 px-3">Cargo Title</th>
-              <th className="py-3 px-3">Carrier / Route</th>
-              <th className="py-3 px-3">Current Telemetry</th>
+              <th className="py-3 px-3">Supplier &bull; Transporter</th>
+              <th className="py-3 px-3">Origin &rarr; Destination</th>
+              <th className="py-3 px-3">Live Telemetry</th>
               <th className="py-3 px-3">Chain Status</th>
               <th className="py-3 px-3 text-right">Action</th>
             </tr>
@@ -119,14 +170,19 @@ export default function ShipmentTable() {
                 <td className="py-3.5 px-3 font-mono font-bold text-cyan-600 dark:text-cyan-400">
                   {s.id}
                 </td>
-                <td className="py-3.5 px-3 font-medium text-slate-900 dark:text-white max-w-[200px] truncate">
-                  {s.title}
+                <td className="py-3.5 px-3 font-medium text-slate-900 dark:text-white max-w-[180px] truncate">
+                  <div>{s.title}</div>
+                  <span className="text-[10px] text-slate-400 font-normal">{s.category}</span>
                 </td>
                 <td className="py-3.5 px-3">
                   <div className="font-semibold text-slate-800 dark:text-slate-200">{s.carrier}</div>
                   <div className="text-[11px] text-slate-400 truncate">
-                    {s.origin} &rarr; {s.destination}
+                    From: {s.supplier || 'Novartis Pharma AG'}
                   </div>
+                </td>
+                <td className="py-3.5 px-3">
+                  <div className="font-medium text-slate-800 dark:text-slate-200 truncate max-w-[160px]">{s.destination}</div>
+                  <div className="text-[10px] text-slate-400 truncate max-w-[160px]">{s.origin}</div>
                 </td>
                 <td className="py-3.5 px-3">
                   <div className="flex items-center gap-1.5 font-mono font-semibold">
@@ -134,7 +190,7 @@ export default function ShipmentTable() {
                     <span>{s.currentTemp ?? '3.8'}°C</span>
                   </div>
                   <div className="text-[10px] text-slate-400">
-                    Target: {s.tempRange?.min}°C — {s.tempRange?.max}°C
+                    SLA: {s.tempRange?.min}°C — {s.tempRange?.max}°C
                   </div>
                 </td>
                 <td className="py-3.5 px-3">

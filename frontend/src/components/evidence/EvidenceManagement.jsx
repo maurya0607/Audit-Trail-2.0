@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import toast from 'react-hot-toast';
 import { useAuth } from '../../context/AuthContext';
 import {
   FileText,
@@ -128,6 +129,10 @@ export default function EvidenceManagement() {
       setShowUploadModal(false);
       setNewTitle('');
       setNewNotes('');
+      toast.success(`Evidence ${newEntry.id} uploaded & notarized with SHA-256`, {
+        icon: '📄',
+        duration: 4500,
+      });
     }, 700);
   };
 

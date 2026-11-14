@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth, ROLE_METADATA, ROLES } from './context/AuthContext';
 import { ShipmentProvider } from './context/ShipmentContext';
 import Navbar from './components/layout/Navbar';
@@ -88,67 +89,26 @@ function AppLayout() {
           </div>
         </div>
 
-        {/* 6-Role Authority Strip (Hackathon Judge Showcase) */}
-        {user && currentRoleMeta && (
-          <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col xl:flex-row xl:items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-cyan-600 dark:text-cyan-400 shrink-0">
-                <UserCheck className="w-4 h-4" />
-              </div>
-              <div className="space-y-0.5">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-xs font-bold text-slate-900 dark:text-white">
-                    {user.name}
-                  </span>
-                  <span
-                    className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${currentRoleMeta.badgeColor}`}
-                  >
-                    {currentRoleMeta.label}
-                  </span>
-                  <span className="text-[11px] text-slate-500 dark:text-slate-400 font-mono">
-                    ({user.organization})
-                  </span>
-                </div>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                  {currentRoleMeta.description}
-                </p>
-              </div>
-            </div>
-
-            {/* 1-Click Role Switcher for All 6 Roles */}
-            <div className="flex items-center gap-1.5 flex-wrap shrink-0">
-              <span className="text-[11px] font-semibold text-slate-400 mr-1 hidden sm:inline">
-                Demo Switch:
-              </span>
-              {[
-                { role: ROLES.LOGISTICS_MANAGER, short: 'Manager' },
-                { role: ROLES.AUDITOR, short: 'Auditor' },
-                { role: ROLES.SUPPLIER, short: 'Supplier' },
-                { role: ROLES.TRANSPORTER, short: 'Transporter' },
-                { role: ROLES.RECEIVER, short: 'Receiver' },
-                { role: ROLES.ADMIN, short: 'Admin' },
-              ].map((r) => (
-                <button
-                  key={r.role}
-                  onClick={() => switchRole(r.role)}
-                  className={`px-2.5 py-1 text-xs font-bold rounded-lg transition-all ${
-                    user.role === r.role
-                      ? 'bg-cyan-600 text-white shadow-sm'
-                      : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
-                  }`}
-                >
-                  {r.short}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
         {/* Dynamic Route View */}
         <AppRoutes activeTab={activeTab} setActiveTab={setActiveTab} />
       </main>
 
-      {/* Global Modals */}
+      {/* Global Modals & Toast Beacon */}
+      <Toaster
+        position="top-right"
+        toastOptions={{
+          duration: 4000,
+          style: {
+            background: isDark ? '#0f172a' : '#ffffff',
+            color: isDark ? '#f8fafc' : '#0f172a',
+            border: isDark ? '1px solid #1e293b' : '1px solid #e2e8f0',
+            borderRadius: '16px',
+            fontSize: '12px',
+            fontWeight: '600',
+            boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.2)',
+          },
+        }}
+      />
       <CreateShipmentModal />
       <ShipmentDetailsModal />
 
