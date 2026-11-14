@@ -1,25 +1,27 @@
 import React, { useState, useEffect } from 'react';
 import { AuthProvider, useAuth, ROLE_METADATA, ROLES } from './context/AuthContext';
+import { ShipmentProvider, useShipments } from './context/ShipmentContext';
 import Navbar from './components/Navbar';
 import StatsCards from './components/StatsCards';
+import ShipmentStatistics from './components/ShipmentStatistics';
+import RecentActivities from './components/RecentActivities';
 import ShipmentTracker from './components/ShipmentTracker';
 import AuditLedger from './components/AuditLedger';
 import RiskAlerts from './components/RiskAlerts';
 import DisputeDesk from './components/DisputeDesk';
 import AuthModal from './components/AuthModal';
+import CreateShipmentModal from './components/CreateShipmentModal';
+import ShipmentDetailsModal from './components/ShipmentDetailsModal';
 import {
   ShieldCheck,
   ArrowRight,
   UserCheck,
-  Sparkles,
-  Lock,
-  ShieldAlert,
 } from 'lucide-react';
 
 function DashboardContent() {
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [selectedShipment, setSelectedShipment] = useState(null);
   const { user, switchRole, canAccessTab, isAuthModalOpen, setIsAuthModalOpen } = useAuth();
+  const { openDetails, setIsCreateOpen } = useShipments();
 
   // Dark / Light Mode state
   const [isDark, setIsDark] = useState(() => {
@@ -47,13 +49,6 @@ function DashboardContent() {
 
   const toggleTheme = () => {
     setIsDark((prev) => !prev);
-  };
-
-  const handleSelectShipment = (shipment) => {
-    setSelectedShipment(shipment);
-    if (canAccessTab('ledger')) {
-      setActiveTab('ledger');
-    }
   };
 
   const currentRoleMeta = user ? ROLE_METADATA[user.role] : null;
@@ -155,47 +150,64 @@ function DashboardContent() {
           </div>
         )}
 
-        {/* Global KPI Metrics Cards */}
+        {/* Global KPI Metrics Cards with Sparklines */}
         <StatsCards />
 
         {/* Dynamic Views based on active tab and role permissions */}
         {activeTab === 'dashboard' && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
-            {canAccessTab('shipments') ? (
-              <ShipmentTracker onSelectShipment={handleSelectShipment} />
-            ) : (
-              <AuditLedger />
-            )}
-            <div className="space-y-8">
-              {canAccessTab('risks') && <RiskAlerts />}
-              {canAccessTab('disputes') && <DisputeDesk />}
-              {!canAccessTab('disputes') && canAccessTab('ledger') && <AuditLedger />}
+          <div className="space-y-8">
+            <ShipmentStatistics />
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+              {canAccessTab('shipments') ? (
+                <ShipmentTracker />
+              ) : (
+                <AuditLedger />
+              )}
+              <div className="space-y-8">
+                <RecentActivities />
+                {canAccessTab('risks') && <RiskAlerts />}
+                {canAccessTab('disputes') && <DisputeDesk />}
+              </div>
             </div>
           </div>
         )}
 
         {activeTab === 'shipments' && canAccessTab('shipments') && (
-          <ShipmentTracker onSelectShipment={handleSelectShipment} />
+          <div className="space-y-8">
+            <ShipmentStatistics />
+            <ShipmentTracker />
+          </div>
         )}
 
         {activeTab === 'ledger' && canAccessTab('ledger') && (
-          <AuditLedger />
+          <div className="space-y-8">
+            <AuditLedger />
+            <RecentActivities />
+          </div>
         )}
 
         {activeTab === 'risks' && canAccessTab('risks') && (
-          <RiskAlerts />
+          <div className="space-y-8">
+            <RiskAlerts />
+            <ShipmentStatistics />
+          </div>
         )}
 
         {activeTab === 'disputes' && canAccessTab('disputes') && (
-          <DisputeDesk />
+          <div className="space-y-8">
+            <DisputeDesk />
+            <RecentActivities />
+          </div>
         )}
       </main>
 
-      {/* Authentication & Registration Modal */}
+      {/* Modals */}
       <AuthModal
         isOpen={isAuthModalOpen}
         onClose={() => setIsAuthModalOpen(false)}
       />
+      <CreateShipmentModal />
+      <ShipmentDetailsModal />
 
       <footer className="border-t border-slate-200 dark:border-slate-900 bg-white/50 dark:bg-slate-950/80 py-6 text-center text-xs text-slate-500 dark:text-slate-500 transition-colors">
         Audit-Trail 2.0 &bull; Role-Based Cryptographic Access &bull; HackDay 2026
@@ -207,7 +219,9 @@ function DashboardContent() {
 export default function App() {
   return (
     <AuthProvider>
-      <DashboardContent />
+      <ShipmentProvider>
+        <DashboardContent />
+      </ShipmentProvider>
     </AuthProvider>
   );
 }
