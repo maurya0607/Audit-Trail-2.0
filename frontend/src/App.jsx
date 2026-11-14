@@ -1,27 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { AuthProvider, useAuth, ROLE_METADATA, ROLES } from './context/AuthContext';
-import { ShipmentProvider, useShipments } from './context/ShipmentContext';
-import Navbar from './components/Navbar';
-import StatsCards from './components/StatsCards';
-import ShipmentStatistics from './components/ShipmentStatistics';
-import RecentActivities from './components/RecentActivities';
-import ShipmentTracker from './components/ShipmentTracker';
-import AuditLedger from './components/AuditLedger';
-import RiskAlerts from './components/RiskAlerts';
-import DisputeDesk from './components/DisputeDesk';
-import AuthModal from './components/AuthModal';
-import CreateShipmentModal from './components/CreateShipmentModal';
-import ShipmentDetailsModal from './components/ShipmentDetailsModal';
+import { ShipmentProvider } from './context/ShipmentContext';
+import Navbar from './components/layout/Navbar';
+import AppRoutes from './routes/AppRoutes';
+import CreateShipmentModal from './components/shipments/CreateShipmentModal';
+import ShipmentDetailsModal from './components/shipments/ShipmentDetailsModal';
 import {
   ShieldCheck,
   ArrowRight,
   UserCheck,
 } from 'lucide-react';
 
-function DashboardContent() {
+function AppLayout() {
   const [activeTab, setActiveTab] = useState('dashboard');
-  const { user, switchRole, canAccessTab, isAuthModalOpen, setIsAuthModalOpen } = useAuth();
-  const { openDetails, setIsCreateOpen } = useShipments();
+  const { user, switchRole, canAccessTab } = useAuth();
 
   // Dark / Light Mode state
   const [isDark, setIsDark] = useState(() => {
@@ -72,10 +64,10 @@ function DashboardContent() {
                 Enterprise Provenance Engine
               </div>
               <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
-                Logistics Auditing & Dispute Arbitration
+                Audit Trail 2.0 &bull; Logistics & Dispute Platform
               </h1>
               <p className="text-sm text-slate-600 dark:text-slate-400 max-w-2xl leading-relaxed">
-                Continuous IoT telemetry tracking, cryptographic SHA-256 event chaining, anomaly risk detection, and automated non-repudiable claim settlement.
+                Cryptographic SHA-256 event chaining, multi-party dispute arbitration, Gemini AI investigation, evidence vault, and real-time IoT tracking.
               </p>
             </div>
 
@@ -96,9 +88,9 @@ function DashboardContent() {
           </div>
         </div>
 
-        {/* Role-Based Authority Strip (Hackathon Judge Showcase) */}
+        {/* 6-Role Authority Strip (Hackathon Judge Showcase) */}
         {user && currentRoleMeta && (
-          <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col xl:flex-row xl:items-center justify-between gap-4">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-cyan-600 dark:text-cyan-400 shrink-0">
                 <UserCheck className="w-4 h-4" />
@@ -123,15 +115,17 @@ function DashboardContent() {
               </div>
             </div>
 
-            {/* 1-Click Role Switcher for Hackathon Testing */}
+            {/* 1-Click Role Switcher for All 6 Roles */}
             <div className="flex items-center gap-1.5 flex-wrap shrink-0">
               <span className="text-[11px] font-semibold text-slate-400 mr-1 hidden sm:inline">
                 Demo Switch:
               </span>
               {[
+                { role: ROLES.LOGISTICS_MANAGER, short: 'Manager' },
                 { role: ROLES.AUDITOR, short: 'Auditor' },
-                { role: ROLES.CARRIER, short: 'Carrier' },
-                { role: ROLES.CONSIGNEE, short: 'Consignee' },
+                { role: ROLES.SUPPLIER, short: 'Supplier' },
+                { role: ROLES.TRANSPORTER, short: 'Transporter' },
+                { role: ROLES.RECEIVER, short: 'Receiver' },
                 { role: ROLES.ADMIN, short: 'Admin' },
               ].map((r) => (
                 <button
@@ -150,67 +144,16 @@ function DashboardContent() {
           </div>
         )}
 
-        {/* Global KPI Metrics Cards with Sparklines */}
-        <StatsCards />
-
-        {/* Dynamic Views based on active tab and role permissions */}
-        {activeTab === 'dashboard' && (
-          <div className="space-y-8">
-            <ShipmentStatistics />
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
-              {canAccessTab('shipments') ? (
-                <ShipmentTracker />
-              ) : (
-                <AuditLedger />
-              )}
-              <div className="space-y-8">
-                <RecentActivities />
-                {canAccessTab('risks') && <RiskAlerts />}
-                {canAccessTab('disputes') && <DisputeDesk />}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {activeTab === 'shipments' && canAccessTab('shipments') && (
-          <div className="space-y-8">
-            <ShipmentStatistics />
-            <ShipmentTracker />
-          </div>
-        )}
-
-        {activeTab === 'ledger' && canAccessTab('ledger') && (
-          <div className="space-y-8">
-            <AuditLedger />
-            <RecentActivities />
-          </div>
-        )}
-
-        {activeTab === 'risks' && canAccessTab('risks') && (
-          <div className="space-y-8">
-            <RiskAlerts />
-            <ShipmentStatistics />
-          </div>
-        )}
-
-        {activeTab === 'disputes' && canAccessTab('disputes') && (
-          <div className="space-y-8">
-            <DisputeDesk />
-            <RecentActivities />
-          </div>
-        )}
+        {/* Dynamic Route View */}
+        <AppRoutes activeTab={activeTab} setActiveTab={setActiveTab} />
       </main>
 
-      {/* Modals */}
-      <AuthModal
-        isOpen={isAuthModalOpen}
-        onClose={() => setIsAuthModalOpen(false)}
-      />
+      {/* Global Modals */}
       <CreateShipmentModal />
       <ShipmentDetailsModal />
 
       <footer className="border-t border-slate-200 dark:border-slate-900 bg-white/50 dark:bg-slate-950/80 py-6 text-center text-xs text-slate-500 dark:text-slate-500 transition-colors">
-        Audit-Trail 2.0 &bull; Role-Based Cryptographic Access &bull; HackDay 2026
+        Audit-Trail 2.0 &bull; Enterprise Cryptographic Provenance Platform &bull; HackDay 2026
       </footer>
     </div>
   );
@@ -220,7 +163,7 @@ export default function App() {
   return (
     <AuthProvider>
       <ShipmentProvider>
-        <DashboardContent />
+        <AppLayout />
       </ShipmentProvider>
     </AuthProvider>
   );
