@@ -14,6 +14,29 @@ GROQ_API_KEY = os.getenv("GROQ_API_KEY", "").strip()
 GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions"
 GROQ_MODEL   = "llama-3.3-70b-versatile"   # fast & capable
 
+def _call_llm(prompt: str) -> str:
+    """Helper that calls Gemini or Groq depending on available API keys."""
+    # 1. Try Groq if key is present
+    if groq_client:
+        for model in ["llama-3.1-70b-versatile", "llama-3.1-8b-instant", "mixtral-8x7b-32768"]:
+            try:
+                resp = groq_client.chat.completions.create(
+                    messages=[{"role": "user", "content": prompt}],
+                    model=model,
+                )
+                return resp.choices[0].message.content.strip()
+            except Exception:
+                continue
+
+    # 2. Try Gemini if client is present
+    if gemini_client:
+        try:
+            resp = gemini_client.models.generate_content(model="gemini-2.5-flash", contents=prompt)
+            return resp.text.strip()
+        except Exception:
+            pass
+
+    return ""
 
 def _groq_chat(prompt: str, system: str = "You are an expert AI assistant.") -> str:
     """

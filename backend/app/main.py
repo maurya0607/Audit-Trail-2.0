@@ -13,7 +13,11 @@ from app.services.replay_service import replay_shipment_state
 from app.routes import auth, disputes
 from app.middleware.auth_middleware import decode_token
 
-app = FastAPI(title="Audit Trail 2.0 - Enterprise Logistics Ledger & AI Dispute API", version="2.0.0")
+app = FastAPI(
+    title="Audit Trail 2.0 - Enterprise Logistics Ledger & AI Dispute API",
+    version="2.0.0",
+    description="Tamper-evident event sourcing, SHA-256 hash chaining, Gemini AI risk detection & dispute arbitration API."
+)
 
 app.add_middleware(
     CORSMiddleware,
@@ -23,39 +27,37 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Include all modular routers as defined in Section 5 Specification
 app.include_router(auth.router)
+app.include_router(shipments.router)
+app.include_router(events.router)
+app.include_router(ledger.router)
+app.include_router(risks.router)
 app.include_router(disputes.router)
-
-class ConnectionManager:
-    def __init__(self):
-        self.active_connections: List[WebSocket] = []
-
-    async def connect(self, websocket: WebSocket):
-        await websocket.accept()
-        self.active_connections.append(websocket)
-
-    def disconnect(self, websocket: WebSocket):
-        if websocket in self.active_connections:
-            self.active_connections.remove(websocket)
-
-    async def broadcast(self, message: dict):
-        for conn in list(self.active_connections):
-            try:
-                await conn.send_json(message)
-            except Exception:
-                pass
-
-ws_manager = ConnectionManager()
+app.include_router(reports.router)
 
 @app.on_event("startup")
 async def startup_event():
+    print("==================================================")
+    print("🚀 AUDIT TRAIL 2.0 BACKEND SERVICE STARTING...")
+    print("==================================================")
     try:
+        # Ping MongoDB database to confirm live connectivity
+        await db.command("ping")
+        print("✅ [DATABASE CONNECTED] Successfully connected to MongoDB Cloud Atlas!")
+        print(f"📦 Active Database: '{db.name}'")
+        
+        # Initialize collections and indexes
         await init_db_indexes()
         print("✅ MongoDB connected and indexes initialized.")
     except Exception as e:
         print(f"⚠️  Warning: Database index initialization skipped: {e}")
 
 # --- Root & Health Check ---
+@app.get("/favicon.ico", include_in_schema=False)
+async def favicon():
+    return Response(content=b"", media_type="image/x-icon")
+
 @app.get("/")
 async def root():
     return {
