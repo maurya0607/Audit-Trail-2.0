@@ -1,6 +1,6 @@
 import os
 import jwt
-from passlib.hash import bcrypt as passlib_bcrypt
+import bcrypt
 from datetime import datetime, timedelta, timezone
 from fastapi import HTTPException, Header
 from typing import Optional
@@ -38,13 +38,17 @@ def normalize_role(role_input: str) -> str:
     return cleaned
 
 def hash_password(password: str) -> str:
-    """Hash password using Passlib bcrypt (compatible with all Python versions)."""
-    return passlib_bcrypt.hash(password)
+    """Hash password using pure native bcrypt (bypasses passlib bug with bcrypt 4+/5+)."""
+    pwd_bytes = password.encode("utf-8")[:72]
+    salt = bcrypt.gensalt()
+    return bcrypt.hashpw(pwd_bytes, salt).decode("utf-8")
 
 def verify_password(plain: str, hashed: str) -> bool:
-    """Verify plain password against bcrypt hash using Passlib."""
+    """Verify plain password against bcrypt hash using pure native bcrypt."""
     try:
-        return passlib_bcrypt.verify(plain, hashed)
+        plain_bytes = plain.encode("utf-8")[:72]
+        hashed_bytes = hashed.encode("utf-8")
+        return bcrypt.checkpw(plain_bytes, hashed_bytes)
     except Exception:
         return False
 
