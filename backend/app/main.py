@@ -60,7 +60,6 @@ async def root():
         "status": "ONLINE",
         "service": "Audit Trail 2.0 API Engine",
         "version": "2.0.0",
-        "docs_url": "/docs",
         "timestamp": datetime.now(timezone.utc).isoformat()
     }
 
@@ -79,7 +78,7 @@ async def get_dashboard_stats():
             "total_disputes": open_disputes,
             "integrity_status": "SHA-256 SYNCED"
         }
-    except Exception:
+    except Exception as e:
         return {
             "active_freight_monitored": 0,
             "chained_blocks": 0,

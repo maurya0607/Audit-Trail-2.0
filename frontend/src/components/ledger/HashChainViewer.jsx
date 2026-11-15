@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import toast from 'react-hot-toast';
 import { ShieldCheck, Link2, AlertTriangle, CheckCircle2, RotateCw, Copy, Check } from 'lucide-react';
 
 export default function HashChainViewer() {
@@ -84,11 +85,17 @@ export default function HashChainViewer() {
           brokenBlock: 2,
           message: 'Integrity Check Failed: Block #2 payloadHash mismatch. Cryptographic chain broken.',
         });
+        toast.error('Cryptographic Tamper Flagged! Block #2 hash mismatch detected', {
+          duration: 5000,
+        });
       } else {
         setVerificationResult({
           valid: true,
           brokenBlock: null,
           message: 'All 4 blocks verified. Full cryptographic Merkle consistency confirmed.',
+        });
+        toast.success('All 4 blocks verified! 100% cryptographic integrity confirmed', {
+          duration: 4000,
         });
       }
     }, 600);

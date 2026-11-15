@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState } from 'react';
+import toast from 'react-hot-toast';
+import { useAuth, ROLES } from './AuthContext';
 
-// Lightweight SHA-256 simulation for client-side verifiable block hashing
 function pseudoSha256(str) {
   let hash = 0;
   for (let i = 0; i < str.length; i++) {
@@ -9,7 +10,6 @@ function pseudoSha256(str) {
     hash |= 0;
   }
   const hex = Math.abs(hash).toString(16).padStart(8, '0');
-  // Return standard 64-char hex string simulation
   return (hex + hex + hex + hex + hex + hex + hex + hex).slice(0, 64);
 }
 
@@ -20,16 +20,19 @@ const INITIAL_SHIPMENTS = [
     category: 'Biopharma / Cold Chain',
     origin: 'Basel Bio Logistics, Switzerland',
     destination: 'Dubai Health Hub, UAE',
+    supplier: 'Novartis Pharma AG',
     carrier: 'AeroCold Global',
+    receiver: 'Dubai Health Authority',
     status: 'IN_TRANSIT',
     temperature: '3.8°C',
+    currentTemp: 3.8,
     tempRange: { min: 2.0, max: 8.0 },
     shock: '0.04G',
     shockThreshold: 0.2,
     humidity: '42%',
     currentCustodian: 'Swiss WorldCargo AG',
     riskScore: 'Low (12/100)',
-    tamperStatus: 'VERIFIED',
+    tamperStatus: 'VERIFIED_SECURE',
     departureDate: '2026-11-14 08:15 UTC',
     estimatedArrival: '2026-11-15 02:30 UTC',
     events: [
@@ -89,20 +92,23 @@ const INITIAL_SHIPMENTS = [
   },
   {
     id: 'SHP-90412-SGP',
-    title: 'Semiconductor Microchips',
+    title: 'Semiconductor Microchips Lot 3nm',
     category: 'High-Value Electronics',
     origin: 'Hsinchu Science Park, Taiwan',
     destination: 'Jurong Logistics Terminal, Singapore',
+    supplier: 'TSMC Wafer Logistics',
     carrier: 'Pacific Freight Express',
+    receiver: 'SingTech Assembly Ltd',
     status: 'CUSTOMS_HOLD',
     temperature: '22.1°C',
+    currentTemp: 22.1,
     tempRange: { min: 15.0, max: 28.0 },
     shock: '0.09G',
     shockThreshold: 0.2,
     humidity: '38%',
     currentCustodian: 'Jurong Port Customs Authority',
     riskScore: 'Medium (48/100)',
-    tamperStatus: 'VERIFIED',
+    tamperStatus: 'VERIFIED_SECURE',
     departureDate: '2026-11-13 14:00 UTC',
     estimatedArrival: '2026-11-16 18:00 UTC',
     events: [
@@ -136,13 +142,16 @@ const INITIAL_SHIPMENTS = [
   },
   {
     id: 'SHP-77103-LAX',
-    title: 'Perishable Organic Produce',
+    title: 'Perishable Organic Produce (100 Boxes)',
     category: 'Perishable Agriculture',
     origin: 'Oaxaca Distribution Center, Mexico',
     destination: 'Los Angeles Terminal, USA',
+    supplier: 'FreshMart Organics LLC',
     carrier: 'NorthStar Intermodal',
+    receiver: 'PrimeGrocers Distribution LAX',
     status: 'EXCURSION_ALERT',
     temperature: '14.2°C (Warning)',
+    currentTemp: 14.2,
     tempRange: { min: 2.0, max: 6.0 },
     shock: '0.31G',
     shockThreshold: 0.2,
@@ -156,28 +165,41 @@ const INITIAL_SHIPMENTS = [
       {
         index: 0,
         type: 'GENESIS_DISPATCH',
-        title: 'Genesis Block: Cold Reefer Loaded',
+        title: 'Genesis Block: Cold Reefer Loaded (100 Boxes)',
         location: 'Oaxaca Distribution Center, Mexico',
         custodian: 'FreshMart Organics LLC',
         timestamp: '2026-11-14 04:00 UTC',
         tempReading: '3.8°C',
         shockReading: '0.02G',
         prevHash: '0000000000000000000000000000000000000000000000000000000000000000',
-        hash: '77a10294bca0918234b0192834bc01928341029abce0192834b0192834b01928',
-        payloadDetails: '18 pallets organic berries pre-cooled to 3.8°C.',
+        hash: 'b8192834019248ba019248bca019248b01928340192834bca019248b0192834b',
+        payloadDetails: '100 boxes loaded into NorthStar Reefer trailer #R-401.',
       },
       {
         index: 1,
-        type: 'COMPRESSOR_FAILURE',
-        title: 'Telemetry Excursion Anomaly',
-        location: 'Mexicali Transit Corridor, Mexico',
+        type: 'CUSTODY_HANDOVER',
+        title: 'Transporter Pickup Logged (100 Units)',
+        location: 'Mexicali Logistics Station, Mexico',
         custodian: 'NorthStar Intermodal Fleet',
-        timestamp: '2026-11-14 13:45 UTC',
+        timestamp: '2026-11-14 08:30 UTC',
+        tempReading: '4.2°C',
+        shockReading: '0.06G',
+        prevHash: 'b8192834019248ba019248bca019248b01928340192834bca019248b0192834b',
+        hash: '5a019248bca019248b019248bca0192481029ab0192481029ab0192834102948',
+        payloadDetails: 'Transporter confirmed pickup of 100 boxes with seal #S-491.',
+      },
+      {
+        index: 2,
+        type: 'CRITICAL_EXCURSION',
+        title: 'Refrigeration Power Failure Detected',
+        location: 'Sonora Corridor Mile 142',
+        custodian: 'NorthStar Intermodal Fleet',
+        timestamp: '2026-11-14 12:15 UTC',
         tempReading: '14.2°C',
         shockReading: '0.31G',
-        prevHash: '77a10294bca0918234b0192834bc01928341029abce0192834b0192834b01928',
-        hash: '9a8f10bc39104fa2891cd01948ba1029348b0192834b0192834b0192834b0192',
-        payloadDetails: 'Compressor power interruption detected for 3h 12m. Shock threshold exceeded.',
+        prevHash: '5a019248bca019248b019248bca0192481029ab0192481029ab0192834102948',
+        hash: 'c81029ab0192481029ab019248bca0192834019248b01928340192834bca0192',
+        payloadDetails: 'Compressor electrical fault duration 3h 12m. Weight loss registered: -8 boxes.',
       },
     ],
   },
@@ -186,12 +208,48 @@ const INITIAL_SHIPMENTS = [
 const ShipmentContext = createContext(null);
 
 export function ShipmentProvider({ children }) {
+  const { user } = useAuth();
   const [shipments, setShipments] = useState(INITIAL_SHIPMENTS);
-  const [selectedShipment, setSelectedShipment] = useState(null);
+  const [selectedShipment, setSelectedShipment] = useState(INITIAL_SHIPMENTS[0]);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
 
-  // View shipment details modal
+  // Role-Based Filtering
+  // ADMIN & AUDITOR & LOGISTICS_MANAGER: See full global freight
+  // SUPPLIER: Outbound dispatches belonging to supplier
+  // TRANSPORTER: Dispatches assigned to carrier
+  // RECEIVER: Inbound consignments destined for receiver
+  const authorizedShipments = shipments.filter((s) => {
+    if (!user) return true;
+    if (user.role === ROLES.ADMIN || user.role === ROLES.AUDITOR || user.role === ROLES.LOGISTICS_MANAGER) {
+      return true;
+    }
+    if (user.role === ROLES.SUPPLIER) {
+      return (
+        s.supplier?.toLowerCase().includes('novartis') ||
+        s.supplier?.toLowerCase().includes('freshmart') ||
+        s.origin?.toLowerCase().includes('basel') ||
+        s.origin?.toLowerCase().includes('oaxaca')
+      );
+    }
+    if (user.role === ROLES.TRANSPORTER) {
+      return (
+        s.carrier?.toLowerCase().includes('aerocold') ||
+        s.carrier?.toLowerCase().includes('northstar') ||
+        s.carrier?.toLowerCase().includes('swiss')
+      );
+    }
+    if (user.role === ROLES.RECEIVER) {
+      return (
+        s.receiver?.toLowerCase().includes('dubai') ||
+        s.receiver?.toLowerCase().includes('primegrocers') ||
+        s.destination?.toLowerCase().includes('dubai') ||
+        s.destination?.toLowerCase().includes('angeles')
+      );
+    }
+    return true;
+  });
+
   const openDetails = (shipment) => {
     setSelectedShipment(shipment);
     setIsDetailsOpen(true);
@@ -201,92 +259,101 @@ export function ShipmentProvider({ children }) {
     setIsDetailsOpen(false);
   };
 
-  // Create new shipment with Genesis Block #0
   const createShipment = (formData) => {
-    const trackingId = `SHP-${Math.floor(10000 + Math.random() * 90000)}-${formData.destination.slice(0, 3).toUpperCase()}`;
+    const newId = `SHP-${Math.floor(10000 + Math.random() * 90000)}-${formData.destination.slice(0, 3).toUpperCase()}`;
     const timestamp = new Date().toISOString().replace('T', ' ').slice(0, 16) + ' UTC';
-    const genesisSeed = `0|${timestamp}|GENESIS_DISPATCH|${formData.origin}|${formData.custodian}|0000000000000000000000000000000000000000000000000000000000000000`;
-    const genesisHash = pseudoSha256(genesisSeed);
 
-    const genesisEvent = {
+    const genesisPayload = {
       index: 0,
       type: 'GENESIS_DISPATCH',
-      title: 'Genesis Block: Dispatch Certified',
+      title: `Genesis Block: ${formData.title} Initialized`,
       location: formData.origin,
-      custodian: formData.custodian || 'Origin Cargo Authority',
-      timestamp: timestamp,
-      tempReading: `${formData.tempMin || 2.0}°C`,
+      custodian: user ? `${user.name} (${user.organization})` : 'Authorized Consignor',
+      timestamp,
+      tempReading: `${formData.tempMin}°C`,
       shockReading: '0.01G',
       prevHash: '0000000000000000000000000000000000000000000000000000000000000000',
-      hash: genesisHash,
-      payloadDetails: formData.description || 'Shipment initialized and cryptographically registered in ledger.',
+      payloadDetails: `Consignment created with SLA temp limits: ${formData.tempMin}°C to ${formData.tempMax}°C. Notes: ${formData.notes || 'None'}`,
     };
 
+    const hashString = `${genesisPayload.index}_${genesisPayload.timestamp}_${genesisPayload.prevHash}_${genesisPayload.payloadDetails}`;
+    genesisPayload.hash = pseudoSha256(hashString);
+
     const newShipment = {
-      id: trackingId,
+      id: newId,
       title: formData.title,
-      category: formData.category || 'General Freight',
+      category: formData.category,
       origin: formData.origin,
       destination: formData.destination,
-      carrier: formData.carrier || 'AeroCold Global',
+      supplier: user?.role === ROLES.SUPPLIER ? user.organization : 'Novartis Pharma AG',
+      carrier: formData.carrier,
+      receiver: 'Authorized Consignee',
       status: 'IN_TRANSIT',
-      temperature: `${((parseFloat(formData.tempMin) + parseFloat(formData.tempMax)) / 2).toFixed(1)}°C`,
-      tempRange: { min: parseFloat(formData.tempMin) || 2.0, max: parseFloat(formData.tempMax) || 8.0 },
+      temperature: `${((formData.tempMin + formData.tempMax) / 2).toFixed(1)}°C`,
+      currentTemp: parseFloat(((formData.tempMin + formData.tempMax) / 2).toFixed(1)),
+      tempRange: { min: formData.tempMin, max: formData.tempMax },
       shock: '0.02G',
-      shockThreshold: parseFloat(formData.shockMax) || 0.2,
+      shockThreshold: 0.2,
       humidity: '45%',
-      currentCustodian: formData.custodian || formData.carrier,
+      currentCustodian: formData.carrier,
       riskScore: 'Low (05/100)',
-      tamperStatus: 'VERIFIED',
+      tamperStatus: 'VERIFIED_SECURE',
       departureDate: timestamp,
-      estimatedArrival: 'Estimated 48h Transit',
-      events: [genesisEvent],
+      estimatedArrival: formData.eta || '2026-11-18 18:00 UTC',
+      events: [genesisPayload],
     };
 
     setShipments([newShipment, ...shipments]);
     setSelectedShipment(newShipment);
-    setIsCreateOpen(false);
-    return newShipment;
+    toast.success(`Genesis Block #0 anchored with SHA-256 hash ${genesisPayload.hash.substring(0, 10)}...`, {
+      icon: '🛡️',
+      duration: 5000,
+    });
   };
 
-  // Append new checkpoint event to a shipment's cryptographic chain
   const addCheckpointEvent = (shipmentId, eventData) => {
     setShipments((prevShipments) =>
-      prevShipments.map((shp) => {
-        if (shp.id !== shipmentId) return shp;
+      prevShipments.map((s) => {
+        if (s.id !== shipmentId) return s;
 
-        const lastEvent = shp.events[shp.events.length - 1];
-        const newIndex = shp.events.length;
+        const prevEvents = s.events || [];
+        const lastEvent = prevEvents[prevEvents.length - 1];
+        const nextIndex = prevEvents.length;
         const timestamp = new Date().toISOString().replace('T', ' ').slice(0, 16) + ' UTC';
-        const seed = `${newIndex}|${timestamp}|${eventData.type}|${eventData.location}|${eventData.custodian}|${lastEvent.hash}`;
-        const eventHash = pseudoSha256(seed);
 
-        const newEvent = {
-          index: newIndex,
+        const newCheckpoint = {
+          index: nextIndex,
           type: eventData.type,
           title: eventData.title,
           location: eventData.location,
           custodian: eventData.custodian,
-          timestamp: timestamp,
-          tempReading: eventData.tempReading || shp.temperature,
-          shockReading: eventData.shockReading || '0.03G',
-          prevHash: lastEvent.hash,
-          hash: eventHash,
-          payloadDetails: eventData.payloadDetails || 'Operational checkpoint verified and hashed.',
+          timestamp,
+          tempReading: eventData.tempReading || s.temperature,
+          shockReading: eventData.shockReading || '0.02G',
+          prevHash: lastEvent ? lastEvent.hash : '0000000000000000000000000000000000000000000000000000000000000000',
+          payloadDetails: eventData.payloadDetails,
         };
 
-        const updatedShipment = {
-          ...shp,
-          temperature: eventData.tempReading || shp.temperature,
-          currentCustodian: eventData.custodian || shp.currentCustodian,
-          events: [...shp.events, newEvent],
+        const hashString = `${newCheckpoint.index}_${newCheckpoint.timestamp}_${newCheckpoint.prevHash}_${newCheckpoint.payloadDetails}_${newCheckpoint.location}`;
+        newCheckpoint.hash = pseudoSha256(hashString);
+
+        const updatedEvents = [...prevEvents, newCheckpoint];
+        const updated = {
+          ...s,
+          currentCustodian: eventData.custodian,
+          events: updatedEvents,
         };
 
         if (selectedShipment && selectedShipment.id === shipmentId) {
-          setSelectedShipment(updatedShipment);
+          setSelectedShipment(updated);
         }
 
-        return updatedShipment;
+        toast.success(`Block #${nextIndex} (${eventData.type}) cryptographically chained!`, {
+          icon: '🔗',
+          duration: 4000,
+        });
+
+        return updated;
       })
     );
   };
@@ -294,13 +361,14 @@ export function ShipmentProvider({ children }) {
   return (
     <ShipmentContext.Provider
       value={{
-        shipments,
+        shipments: authorizedShipments,
+        allShipments: shipments,
         selectedShipment,
         isDetailsOpen,
         isCreateOpen,
+        setIsCreateOpen,
         openDetails,
         closeDetails,
-        setIsCreateOpen,
         createShipment,
         addCheckpointEvent,
       }}

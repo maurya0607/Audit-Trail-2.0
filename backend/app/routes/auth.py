@@ -25,6 +25,7 @@ async def register_user(req: UserRegister):
     token = create_access_token({"email": req.email, "role": canonical_role, "name": req.name})
     return {"access_token": token, "user": {"name": req.name, "email": req.email, "role": canonical_role}}
 
+
 @router.post("/login")
 async def login_user(req: UserLogin):
     user = await db.users.find_one({"email": req.email})
