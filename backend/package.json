@@ -1,0 +1,10 @@
+{
+  "name": "audit-trail-backend",
+  "version": "2.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "..\\.venv\\Scripts\\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload",
+    "start": "..\\.venv\\Scripts\\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8000",
+    "simulate": "..\\.venv\\Scripts\\python.exe scripts/simulate_iot.py"
+  }
+}
