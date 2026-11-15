@@ -2,23 +2,30 @@ import apiClient from './api';
 
 export const authService = {
   async login(email, password) {
-    try {
-      const data = await apiClient.post('/auth/login', { email, password });
-      if (data.access_token) {
-        localStorage.setItem('audit_trail_token', data.access_token);
-      }
-      return data;
-    } catch (e) {
-      return { success: true, token: 'mock-jwt-token' };
+    const data = await apiClient.post('/auth/login', { email, password });
+    if (data.access_token) {
+      localStorage.setItem('audit_trail_token', data.access_token);
     }
+    return data;
   },
 
   async register(userData) {
-    try {
-      return await apiClient.post('/auth/register', userData);
-    } catch (e) {
-      return { success: true, user: userData };
+    const data = await apiClient.post('/auth/register', userData);
+    if (data.access_token) {
+      localStorage.setItem('audit_trail_token', data.access_token);
     }
+    return data;
+  },
+
+  async updateProfile(formData) {
+    const payload = {
+      name: formData.name,
+      organization: formData.organization,
+    };
+    if (formData.password) {
+      payload.password = formData.password;
+    }
+    return await apiClient.patch('/profile', payload);
   },
 
   logout() {

@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import authService from '../services/authService';
 
 export const ROLES = {
   ADMIN: 'ADMIN',
@@ -152,7 +153,28 @@ export function AuthProvider({ children }) {
     localStorage.setItem('audit_trail_registered_users', JSON.stringify(registeredUsers));
   }, [registeredUsers]);
 
-  const login = (email, password, selectedRole) => {
+  const login = async (email, password, selectedRole) => {
+    try {
+      // 1. First try live backend FastAPI + MongoDB login
+      const backendRes = await authService.login(email, password);
+      if (backendRes && backendRes.user) {
+        const loggedUser = {
+          id: backendRes.user.email,
+          name: backendRes.user.name,
+          email: backendRes.user.email,
+          role: backendRes.user.role?.toUpperCase().replace(/ /g, '_') || selectedRole,
+          organization: `${backendRes.user.role} Verified Entity`,
+          associatedEntity: backendRes.user.name,
+        };
+        setUser(loggedUser);
+        setIsAuthModalOpen(false);
+        return { success: true, user: loggedUser };
+      }
+    } catch (apiErr) {
+      console.warn('Backend login attempt:', apiErr.message);
+    }
+
+    // 2. Demo & local fallback
     const allUsers = [...DEMO_USERS, ...registeredUsers];
     const match = allUsers.find(
       (u) =>
@@ -181,8 +203,36 @@ export function AuthProvider({ children }) {
     return { success: true, user: generatedUser };
   };
 
-  const register = ({ name, email, password, role, organization }) => {
+  const register = async ({ name, email, password, role, organization }) => {
     const targetRole = role || ROLES.LOGISTICS_MANAGER;
+    try {
+      // Send real registration to FastAPI Backend -> MongoDB `users` collection
+      const backendRes = await authService.register({
+        name,
+        email,
+        password: password || 'password123',
+        role: targetRole,
+      });
+
+      if (backendRes && backendRes.user) {
+        const newUser = {
+          id: backendRes.user.email,
+          name: backendRes.user.name,
+          email: backendRes.user.email,
+          role: backendRes.user.role?.toUpperCase().replace(/ /g, '_') || targetRole,
+          organization: organization || `${ROLE_METADATA[targetRole]?.label} Organization`,
+          associatedEntity: organization || ROLE_METADATA[targetRole]?.label,
+        };
+        setRegisteredUsers((prev) => [newUser, ...prev]);
+        setUser(newUser);
+        setIsAuthModalOpen(false);
+        return { success: true, user: newUser };
+      }
+    } catch (err) {
+      console.warn('Backend register attempt:', err.message);
+    }
+
+    // Local fallback if offline
     const newUser = {
       id: `USR-${Date.now().toString().slice(-4)}`,
       name,
@@ -226,6 +276,7 @@ export function AuthProvider({ children }) {
     <AuthContext.Provider
       value={{
         user,
+        setUser,
         login,
         register,
         logout,

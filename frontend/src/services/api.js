@@ -17,6 +17,15 @@ export const apiClient = {
     });
   },
 
+  async patch(endpoint, body, options = {}) {
+    return this.request(endpoint, {
+      ...options,
+      method: 'PATCH',
+      body: JSON.stringify(body),
+      headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
+    });
+  },
+
   async request(endpoint, options = {}) {
     const token = localStorage.getItem('audit_trail_token');
     const headers = {

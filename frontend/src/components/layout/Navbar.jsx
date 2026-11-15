@@ -85,35 +85,26 @@ function AuthModal({ isOpen, onClose }) {
   const [selectedRole, setSelectedRole] = useState(ROLES.ADMIN);
   const [showPassword, setShowPassword] = useState(false);
 
-  // Form input states
+  // Form input states (Clean professional inputs with placeholders, no hardcoded auto-fill)
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('password123');
+  const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [organization, setOrganization] = useState('');
 
-  // Auto-fill demo details when role is selected in dropdown
+  // Handle role selection without overriding user-typed credentials
   const handleRoleChange = (newRole) => {
     setSelectedRole(newRole);
-    const demo = DEMO_USERS.find((u) => u.role === newRole);
-    if (demo) {
-      setEmail(demo.email);
-      setPassword('password123');
-      setName(demo.name);
-      setOrganization(demo.organization);
-    }
   };
 
+  // Keep form inputs clean on modal open
   useEffect(() => {
     if (isOpen) {
-      const demo = DEMO_USERS.find((u) => u.role === selectedRole);
-      if (demo && !email) {
-        setEmail(demo.email);
-        setPassword('password123');
-        setName(demo.name);
-        setOrganization(demo.organization);
-      }
+      setEmail('');
+      setPassword('');
+      setName('');
+      setOrganization('');
     }
-  }, [isOpen, selectedRole]);
+  }, [isOpen, mode]);
 
   if (!isOpen) return null;
 
@@ -272,15 +263,37 @@ function AuthModal({ isOpen, onClose }) {
                   Company / Organization
                 </label>
                 <div className="relative">
-                  <Building2 className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
-                  <input
-                    type="text"
+                  <Building2 className="w-4 h-4 text-slate-400 absolute left-3 top-2.5 pointer-events-none" />
+                  <select
                     required
                     value={organization}
                     onChange={(e) => setOrganization(e.target.value)}
-                    placeholder="e.g. Novartis / AeroCold"
-                    className="w-full pl-9 pr-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-cyan-500 dark:text-white"
-                  />
+                    className="w-full pl-9 pr-8 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-cyan-500 dark:text-white appearance-none cursor-pointer"
+                  >
+                    <option value="">Select Organization Entity...</option>
+                    <optgroup label="Platform & Regulatory">
+                      <option value="Audit-Trail 2.0 Global Operations">Audit-Trail 2.0 Global Operations</option>
+                      <option value="Maritime Compliance & Biopharma Audit Bureau">Maritime Compliance & Biopharma Audit Bureau</option>
+                      <option value="Global Logistics Standards Council">Global Logistics Standards Council</option>
+                    </optgroup>
+                    <optgroup label="Suppliers & Manufacturers">
+                      <option value="Novartis Pharma AG">Novartis Pharma AG (Basel Bio Hub)</option>
+                      <option value="Pfizer BioLogistics Global">Pfizer BioLogistics Global</option>
+                      <option value="FreshMart Organics Supply Co.">FreshMart Organics Supply Co.</option>
+                    </optgroup>
+                    <optgroup label="Carriers & Freight Transporters">
+                      <option value="Swiss WorldCargo AG">Swiss WorldCargo AG</option>
+                      <option value="AeroCold Global Logistics">AeroCold Global Logistics</option>
+                      <option value="DHL Global Cold-Chain Express">DHL Global Cold-Chain Express</option>
+                      <option value="Emirates SkyCargo Freight">Emirates SkyCargo Freight</option>
+                    </optgroup>
+                    <optgroup label="Consignees & Receiving Hubs">
+                      <option value="Dubai Health Hub Central Depot">Dubai Health Hub Central Depot</option>
+                      <option value="Berlin Charite Clinical Reserves">Berlin Charite Clinical Reserves</option>
+                      <option value="MetroHealth Regional Hospital Network">MetroHealth Regional Hospital Network</option>
+                    </optgroup>
+                  </select>
+                  <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3 top-2.5 pointer-events-none" />
                 </div>
               </div>
             </div>
@@ -343,42 +356,51 @@ function AuthModal({ isOpen, onClose }) {
           </button>
 
           {/* Quick Demo Switcher Strip for Hackathon Judges */}
-          <div className="pt-3 border-t border-slate-200 dark:border-slate-800 space-y-2">
-            <div className="flex items-center justify-between text-xs">
-              <span className="font-bold text-slate-600 dark:text-slate-400 flex items-center gap-1">
-                <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                <span>1-Click Hackathon Evaluator Profiles:</span>
-              </span>
-              <span className="text-[10px] text-slate-400">click to load</span>
+          {mode === 'login' && (
+            <div className="pt-3 border-t border-slate-200 dark:border-slate-800 space-y-2">
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-bold text-slate-600 dark:text-slate-400 flex items-center gap-1">
+                  <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                  <span>Demo Quick-Fill:</span>
+                </span>
+                <span className="text-[10px] text-slate-400">click to load credentials</span>
+              </div>
+              <div className="grid grid-cols-3 gap-1.5">
+                {[
+                  { role: ROLES.ADMIN, label: 'Admin' },
+                  { role: ROLES.LOGISTICS_MANAGER, label: 'Manager' },
+                  { role: ROLES.SUPPLIER, label: 'Supplier' },
+                  { role: ROLES.TRANSPORTER, label: 'Transporter' },
+                  { role: ROLES.RECEIVER, label: 'Receiver' },
+                  { role: ROLES.AUDITOR, label: 'Auditor' },
+                ].map((r) => {
+                  const isSelected = selectedRole === r.role;
+                  const meta = ROLE_METADATA[r.role];
+                  return (
+                    <button
+                      key={r.role}
+                      type="button"
+                      onClick={() => {
+                        setSelectedRole(r.role);
+                        const demo = DEMO_USERS.find((u) => u.role === r.role);
+                        if (demo) {
+                          setEmail(demo.email);
+                          setPassword(demo.password || 'password123');
+                        }
+                      }}
+                      className={`px-2 py-1.5 rounded-lg text-[10px] font-bold border transition-all truncate text-center ${
+                        isSelected
+                          ? 'bg-slate-900 text-white dark:bg-cyan-500/20 dark:text-cyan-300 border-cyan-500'
+                          : `${meta.badgeColor} hover:opacity-80`
+                      }`}
+                    >
+                      {r.label}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-            <div className="grid grid-cols-3 gap-1.5">
-              {[
-                { role: ROLES.ADMIN, label: 'Admin' },
-                { role: ROLES.LOGISTICS_MANAGER, label: 'Manager' },
-                { role: ROLES.SUPPLIER, label: 'Supplier' },
-                { role: ROLES.TRANSPORTER, label: 'Transporter' },
-                { role: ROLES.RECEIVER, label: 'Receiver' },
-                { role: ROLES.AUDITOR, label: 'Auditor' },
-              ].map((r) => {
-                const isSelected = selectedRole === r.role;
-                const meta = ROLE_METADATA[r.role];
-                return (
-                  <button
-                    key={r.role}
-                    type="button"
-                    onClick={() => handleRoleChange(r.role)}
-                    className={`px-2 py-1.5 rounded-lg text-[10px] font-bold border transition-all truncate text-center ${
-                      isSelected
-                        ? 'bg-slate-900 text-white dark:bg-cyan-500/20 dark:text-cyan-300 border-cyan-500'
-                        : `${meta.badgeColor} hover:opacity-80`
-                    }`}
-                  >
-                    {r.label}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+          )}
         </form>
       </div>
     </div>
@@ -531,54 +553,63 @@ export default function Navbar({ activeTab, setActiveTab, isDark, toggleTheme })
                         </div>
                       </div>
 
-                      {/* Role Switcher Grid */}
-                      <div className="mb-3">
-                        <div className="flex items-center gap-1.5 px-1 mb-2">
-                          <Sparkles className="w-3 h-3 text-amber-500" />
-                          <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                            Switch Role Authority
+                      {/* Role Switcher Grid (Strictly available ONLY to Platform Admin) */}
+                      {user.role === ROLES.ADMIN ? (
+                        <div className="mb-3">
+                          <div className="flex items-center gap-1.5 px-1 mb-2">
+                            <Sparkles className="w-3 h-3 text-amber-500" />
+                            <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                              Admin Switch Role Authority
+                            </span>
+                          </div>
+                          <div className="grid grid-cols-2 gap-1.5">
+                            {Object.values(ROLES).map((role) => {
+                              const meta = ROLE_METADATA[role];
+                              const color = ROLE_COLORS[role];
+                              const Icon2 = ROLE_ICONS[role];
+                              const isCurrentRole = user.role === role;
+
+                              return (
+                                <button
+                                  key={role}
+                                  onClick={() => {
+                                    switchRole(role);
+                                    setIsDropdownOpen(false);
+                                  }}
+                                  className={`flex items-center gap-2 px-2.5 py-2 rounded-xl text-left transition-all border ${
+                                    isCurrentRole
+                                      ? `${color.bg} border-current/30`
+                                      : 'border-transparent hover:bg-slate-50 dark:hover:bg-slate-800 border-slate-100 dark:border-slate-800'
+                                  }`}
+                                >
+                                  <Icon2 className={`w-3.5 h-3.5 shrink-0 ${color.icon}`} />
+                                  <div className="min-w-0">
+                                    <div
+                                      className={`text-[10px] font-bold truncate ${
+                                        isCurrentRole ? color.icon : 'text-slate-700 dark:text-slate-300'
+                                      }`}
+                                    >
+                                      {meta.label}
+                                    </div>
+                                  </div>
+                                  {isCurrentRole && (
+                                    <CheckCircle2
+                                      className={`w-3 h-3 ml-auto shrink-0 ${color.icon}`}
+                                    />
+                                  )}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      ) : (
+                        /* Non-admin users: Role is locked and bound to their organization */
+                        <div className="mb-3 p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 text-center">
+                          <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400">
+                            Role Boundary: <strong className="text-slate-800 dark:text-slate-200">{roleMeta?.label} Scope</strong>
                           </span>
                         </div>
-                        <div className="grid grid-cols-2 gap-1.5">
-                          {Object.values(ROLES).map((role) => {
-                            const meta = ROLE_METADATA[role];
-                            const color = ROLE_COLORS[role];
-                            const Icon2 = ROLE_ICONS[role];
-                            const isCurrentRole = user.role === role;
-
-                            return (
-                              <button
-                                key={role}
-                                onClick={() => {
-                                  switchRole(role);
-                                  setIsDropdownOpen(false);
-                                }}
-                                className={`flex items-center gap-2 px-2.5 py-2 rounded-xl text-left transition-all border ${
-                                  isCurrentRole
-                                    ? `${color.bg} border-current/30`
-                                    : 'border-transparent hover:bg-slate-50 dark:hover:bg-slate-800 border-slate-100 dark:border-slate-800'
-                                }`}
-                              >
-                                <Icon2 className={`w-3.5 h-3.5 shrink-0 ${color.icon}`} />
-                                <div className="min-w-0">
-                                  <div
-                                    className={`text-[10px] font-bold truncate ${
-                                      isCurrentRole ? color.icon : 'text-slate-700 dark:text-slate-300'
-                                    }`}
-                                  >
-                                    {meta.label}
-                                  </div>
-                                </div>
-                                {isCurrentRole && (
-                                  <CheckCircle2
-                                    className={`w-3 h-3 ml-auto shrink-0 ${color.icon}`}
-                                  />
-                                )}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
+                      )}
 
                       {/* Dropdown Action Buttons */}
                       <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">

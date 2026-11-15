@@ -9,13 +9,17 @@ import EventLedger from '../pages/EventLedger';
 import EventReplay from '../pages/EventReplay';
 import AuditReports from '../pages/AuditReports';
 import UserProfile from '../pages/UserProfile';
+import ProfileEdit from '../pages/ProfileEdit';
 import { useAuth } from '../context/AuthContext';
 import { ShieldAlert } from 'lucide-react';
 
 export default function AppRoutes({ activeTab, setActiveTab }) {
   const { canAccessTab, user } = useAuth();
 
-  if (activeTab !== 'dashboard' && !canAccessTab(activeTab)) {
+  // 'profile' is always accessible by any logged-in user – bypass the tab-guard
+  const isPublicTab = activeTab === 'profile';
+
+  if (!isPublicTab && activeTab !== 'dashboard' && !canAccessTab(activeTab)) {
     return (
       <div className="p-8 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-center space-y-3 max-w-md mx-auto">
         <ShieldAlert className="w-10 h-10 text-amber-500 mx-auto" />
@@ -55,6 +59,8 @@ export default function AppRoutes({ activeTab, setActiveTab }) {
     case 'reports':
       return <AuditReports />;
     case 'profile':
+      return <ProfileEdit setActiveTab={setActiveTab} />;
+    case 'profile-view':
       return <UserProfile />;
     default:
       return <Dashboard />;

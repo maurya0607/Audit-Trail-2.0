@@ -34,8 +34,10 @@ function AppLayout() {
   }, [isDark]);
 
   // If user role changes and current tab is no longer permitted, redirect to dashboard
+  // 'profile' is always accessible by any logged-in user, so skip the check for it
   useEffect(() => {
-    if (activeTab !== 'dashboard' && !canAccessTab(activeTab)) {
+    const alwaysAllowed = ['dashboard', 'profile'];
+    if (!alwaysAllowed.includes(activeTab) && !canAccessTab(activeTab)) {
       setActiveTab('dashboard');
     }
   }, [user?.role, activeTab]);
