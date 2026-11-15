@@ -1,13 +1,12 @@
 import os
 import jwt
+from passlib.hash import bcrypt as passlib_bcrypt
 from datetime import datetime, timedelta, timezone
-from passlib.context import CryptContext
 from fastapi import HTTPException, Header
 from typing import Optional
 
-SECRET_KEY = os.getenv("JWT_SECRET", "audit_trail_2_super_secret_key")
-ALGORITHM = "HS256"
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+SECRET_KEY = os.getenv("JWT_SECRET", "audit_trail_2_super_secret_enterprise_jwt_key_2026_sha256")
+ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
 
 # Support both canonical Title Case and uppercase codes from frontend
 ROLE_MAP = {
@@ -29,7 +28,7 @@ def normalize_role(role_input: str) -> str:
     """Normalize any role string (e.g. 'ADMIN', 'LOGISTICS_MANAGER', 'Supplier') to canonical title."""
     if not role_input:
         return "Logistics Manager"
-    cleaned = role_input.strip()
+    cleaned = str(role_input).strip()
     upper = cleaned.upper().replace("-", "_")
     if upper in ROLE_MAP:
         return ROLE_MAP[upper]
@@ -39,10 +38,15 @@ def normalize_role(role_input: str) -> str:
     return cleaned
 
 def hash_password(password: str) -> str:
-    return pwd_context.hash(password)
+    """Hash password using Passlib bcrypt (compatible with all Python versions)."""
+    return passlib_bcrypt.hash(password)
 
 def verify_password(plain: str, hashed: str) -> bool:
-    return pwd_context.verify(plain, hashed)
+    """Verify plain password against bcrypt hash using Passlib."""
+    try:
+        return passlib_bcrypt.verify(plain, hashed)
+    except Exception:
+        return False
 
 def create_access_token(data: dict) -> str:
     to_encode = data.copy()
@@ -52,9 +56,9 @@ def create_access_token(data: dict) -> str:
 
 def decode_token(authorization: Optional[str] = Header(None)) -> dict:
     if not authorization:
-        return {"email": "demo@audittrail.io", "role": "Logistics Manager"}
+        return {"email": "demo@audittrail.io", "role": "Logistics Manager", "name": "Demo User"}
     try:
-        token = authorization.replace("Bearer ", "")
+        token = authorization.replace("Bearer ", "").strip()
         return jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
     except Exception:
         raise HTTPException(status_code=401, detail="Invalid or expired JWT token")

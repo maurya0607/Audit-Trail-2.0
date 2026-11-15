@@ -1,8 +1,8 @@
 from datetime import datetime, timezone
-from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect, Header
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
-from typing import List
+from typing import List, Optional
 from fpdf import FPDF
 
 from app.database import db, init_db_indexes
@@ -11,6 +11,7 @@ from app.services.hash_service import verify_event_chain
 from app.services.event_service import process_and_ingest_event
 from app.services.replay_service import replay_shipment_state
 from app.routes import auth, disputes
+from app.middleware.auth_middleware import decode_token
 
 app = FastAPI(title="Audit Trail 2.0 - Enterprise Logistics Ledger & AI Dispute API", version="2.0.0")
 
@@ -50,8 +51,9 @@ ws_manager = ConnectionManager()
 async def startup_event():
     try:
         await init_db_indexes()
+        print("✅ MongoDB connected and indexes initialized.")
     except Exception as e:
-        print(f"Warning: Database index initialization skipped (MongoDB may be connecting): {e}")
+        print(f"⚠️  Warning: Database index initialization skipped: {e}")
 
 # --- Root & Health Check ---
 @app.get("/")
@@ -78,7 +80,7 @@ async def get_dashboard_stats():
             "total_disputes": open_disputes,
             "integrity_status": "SHA-256 SYNCED"
         }
-    except Exception as e:
+    except Exception:
         return {
             "active_freight_monitored": 0,
             "chained_blocks": 0,
@@ -89,8 +91,10 @@ async def get_dashboard_stats():
 
 # --- Shipments ---
 @app.post("/api/shipments")
-async def create_shipment(shipment: ShipmentCreate):
+async def create_shipment(shipment: ShipmentCreate, token: Optional[str] = Header(None)):
+    user = decode_token(token)
     doc = shipment.model_dump()
+    doc["created_by"] = user.get("email", "unknown")
     doc["current_status"] = "CREATED"
     doc["created_at"] = datetime.now(timezone.utc).isoformat()
     try:
@@ -173,6 +177,35 @@ async def generate_audit_pdf(shipment_id: str):
         headers={"Content-Disposition": f"attachment; filename=audit_{shipment_id}.pdf"}
     )
 
+# --- Profile Update ---
+@app.patch("/api/profile")
+async def update_profile(payload: dict, token: Optional[str] = Header(None)):
+    """Update the current user's profile (name, organization, optional password)."""
+    user = decode_token(token)
+    email = user.get("email")
+    if not email or email == "demo@audittrail.io":
+        raise HTTPException(status_code=401, detail="Must be logged in to update profile")
+
+    update_fields = {}
+    if "name" in payload:
+        update_fields["name"] = payload["name"]
+    if "organization" in payload:
+        update_fields["organization"] = payload["organization"]
+    if payload.get("password"):
+        from app.middleware.auth_middleware import hash_password
+        update_fields["password_hash"] = hash_password(payload["password"])
+
+    if not update_fields:
+        raise HTTPException(status_code=400, detail="No fields to update")
+
+    result = await db.users.update_one({"email": email}, {"$set": update_fields})
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    updated = await db.users.find_one({"email": email}, {"_id": 0, "password_hash": 0})
+    return {"success": True, "user": updated}
+
+# --- WebSocket Live Feed ---
 @app.websocket("/ws/live")
 async def websocket_endpoint(websocket: WebSocket):
     await ws_manager.connect(websocket)
